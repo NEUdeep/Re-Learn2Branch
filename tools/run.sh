@@ -12,4 +12,4 @@ python generate_instances.py setcover -j 8
 bash train.sh
 
 # 2.Test
-sh test .sh
+sh test.sh
