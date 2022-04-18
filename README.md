@@ -1,8 +1,8 @@
 ## Exact Combinatorial Optimization with Graph Convolutional Neural Networks (Ecole+Pytorch+Pytorch Geometric reimplementation)
 
-This is reimplementation of the proposed GNN model from the paper "Exact Combinatorial Optimization with Graph Convolutional Neural Networks" [NeurIPS 2019 paper](https://arxiv.org/abs/1906.01629) using the [Ecole library](https://github.com/ds4dm/ecole).
+This is the update for reimplementation of the proposed GNN model from the paper "Exact Combinatorial Optimization with Graph Convolutional Neural Networks" [NeurIPS 2019 paper](https://arxiv.org/abs/1906.01629), Pytorch version [learn2branch-ecole](https://github.com/ds4dm/learn2branch-ecole) using the [Ecole library](https://github.com/ds4dm/ecole).
 
-As mentionned, this repo only implements the GNN model. For comparisons with the other ML competitors (ExtraTrees, LambdaMART and SVMRank), please see the original implementation [learn2branch](https://github.com/ds4dm/learn2branch) and Pytorch version [learn2branch-ecole](https://github.com/ds4dm/learn2branch-ecole).
+As mentionned, this repo only implements the GNN model. For comparisons with the other ML competitors (ExtraTrees, LambdaMART and SVMRank), please see the original implementation [learn2branch](https://github.com/ds4dm/learn2branch).
 
 <table style='border:none;'>
   <tr>
