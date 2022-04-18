@@ -1,0 +1,15 @@
+dependencies:
+  # Minimal dependencies for the competition
+  - python=3.7
+  - scipy=1.7.3
+  - ecole=0.7.2
+  - numpy
+  - pyscipopt
+
+  # additional conda dependencies go here
+  - torch=1.10.0
+  - torchvision
+  - torchaudio
+  - cudatoolkit=10.2
+  - torch-scatter=2.0.9
+  - torch-geometric=2.0.4
