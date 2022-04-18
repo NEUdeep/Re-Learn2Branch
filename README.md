@@ -33,6 +33,8 @@ You can find in ./requirements.yaml
 ## Installation
 
 ```
+git clone https://github.com/NEUdeep/Re-Learn2Branch
+
 bash tools/install.sh
 ```
 
