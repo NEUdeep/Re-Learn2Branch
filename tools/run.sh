@@ -11,5 +11,5 @@ python generate_instances.py setcover -j 8
 # 2.Train with GCN
 bash train.sh
 
-# 2.Test
+# 3.Test
 sh test.sh
