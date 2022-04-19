@@ -1,14 +1,9 @@
 import os
-import sys
-import importlib
 import argparse
 import csv
 import numpy as np
 import time
-import pickle
-
 import ecole
-import pyscipopt
 
 
 if __name__ == "__main__":
