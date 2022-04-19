@@ -2,7 +2,6 @@ import os
 import argparse
 import numpy as np
 import scipy.sparse
-import utilities
 from itertools import combinations
 
 
