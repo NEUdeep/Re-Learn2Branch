@@ -21,6 +21,7 @@ class Graph:
     neighbors : dictionary of type {int: set of ints}
         The neighbors of each node in the graph.
     """
+
     def __init__(self, number_of_nodes, edges, degrees, neighbors):
         self.number_of_nodes = number_of_nodes
         self.edges = edges
@@ -46,16 +47,24 @@ class Graph:
         leftover_nodes = (-self.degrees).argsort().tolist()
 
         while leftover_nodes:
-            clique_center, leftover_nodes = leftover_nodes[0], leftover_nodes[1:]
+            clique_center, leftover_nodes = leftover_nodes[0], leftover_nodes[
+                1:]
             clique = {clique_center}
-            neighbors = self.neighbors[clique_center].intersection(leftover_nodes)
-            densest_neighbors = sorted(neighbors, key=lambda x: -self.degrees[x])
+            neighbors = self.neighbors[clique_center].intersection(
+                leftover_nodes)
+            densest_neighbors = sorted(neighbors,
+                                       key=lambda x: -self.degrees[x])
             for neighbor in densest_neighbors:
                 # Can you add it to the clique, and maintain cliqueness?
-                if all([neighbor in self.neighbors[clique_node] for clique_node in clique]):
+                if all([
+                        neighbor in self.neighbors[clique_node]
+                        for clique_node in clique
+                ]):
                     clique.add(neighbor)
             cliques.append(clique)
-            leftover_nodes = [node for node in leftover_nodes if node not in clique]
+            leftover_nodes = [
+                node for node in leftover_nodes if node not in clique
+            ]
 
         return cliques
 
@@ -121,8 +130,11 @@ class Graph:
                 neighborhood = np.arange(new_node)
             # remaining nodes are picked stochastically
             else:
-                neighbor_prob = degrees[:new_node] / (2*len(edges))
-                neighborhood = random.choice(new_node, affinity, replace=False, p=neighbor_prob)
+                neighbor_prob = degrees[:new_node] / (2 * len(edges))
+                neighborhood = random.choice(new_node,
+                                             affinity,
+                                             replace=False,
+                                             p=neighbor_prob)
             for node in neighborhood:
                 edges.add((node, new_node))
                 degrees[node] += 1
@@ -162,14 +174,20 @@ def generate_indset(graph, filename):
         used_nodes.update(group)
     for node in range(10):
         if node not in used_nodes:
-            inequalities.add((node,))
+            inequalities.add((node, ))
 
     with open(filename, 'w') as lp_file:
-        lp_file.write("maximize\nOBJ:" + "".join([f" + 1 x{node+1}" for node in range(len(graph))]) + "\n")
+        lp_file.write(
+            "maximize\nOBJ:" +
+            "".join([f" + 1 x{node+1}" for node in range(len(graph))]) + "\n")
         lp_file.write("\nsubject to\n")
         for count, group in enumerate(inequalities):
-            lp_file.write(f"C{count+1}:" + "".join([f" + x{node+1}" for node in sorted(group)]) + " <= 1\n")
-        lp_file.write("\nbinary\n" + " ".join([f"x{node+1}" for node in range(len(graph))]) + "\n")
+            lp_file.write(f"C{count+1}:" +
+                          "".join([f" + x{node+1}"
+                                   for node in sorted(group)]) + " <= 1\n")
+        lp_file.write("\nbinary\n" +
+                      " ".join([f"x{node+1}"
+                                for node in range(len(graph))]) + "\n")
 
 
 def generate_setcover(nrows, ncols, density, filename, rng, max_coef=100):
@@ -204,23 +222,28 @@ def generate_setcover(nrows, ncols, density, filename, rng, max_coef=100):
 
     # compute number of rows per column
     indices = rng.choice(ncols, size=nnzrs)  # random column indexes
-    indices[:2 * ncols] = np.repeat(np.arange(ncols), 2)  # force at leats 2 rows per col
+    indices[:2 * ncols] = np.repeat(np.arange(ncols),
+                                    2)  # force at leats 2 rows per col
     _, col_nrows = np.unique(indices, return_counts=True)
 
     # for each column, sample random rows
-    indices[:nrows] = rng.permutation(nrows) # force at least 1 column per row
+    indices[:nrows] = rng.permutation(nrows)  # force at least 1 column per row
     i = 0
     indptr = [0]
     for n in col_nrows:
 
         # empty column, fill with random rows
         if i >= nrows:
-            indices[i:i+n] = rng.choice(nrows, size=n, replace=False)
+            indices[i:i + n] = rng.choice(nrows, size=n, replace=False)
 
         # partially filled column, complete with random rows among remaining ones
         elif i + n > nrows:
-            remaining_rows = np.setdiff1d(np.arange(nrows), indices[i:nrows], assume_unique=True)
-            indices[nrows:i+n] = rng.choice(remaining_rows, size=i+n-nrows, replace=False)
+            remaining_rows = np.setdiff1d(np.arange(nrows),
+                                          indices[i:nrows],
+                                          assume_unique=True)
+            indices[nrows:i + n] = rng.choice(remaining_rows,
+                                              size=i + n - nrows,
+                                              replace=False)
 
         i += n
         indptr.append(i)
@@ -230,8 +253,8 @@ def generate_setcover(nrows, ncols, density, filename, rng, max_coef=100):
 
     # sparce CSC to sparse CSR matrix
     A = scipy.sparse.csc_matrix(
-            (np.ones(len(indices), dtype=int), indices, indptr),
-            shape=(nrows, ncols)).tocsr()
+        (np.ones(len(indices), dtype=int), indices, indptr),
+        shape=(nrows, ncols)).tocsr()
     indices = A.indices
     indptr = A.indptr
 
@@ -242,17 +265,28 @@ def generate_setcover(nrows, ncols, density, filename, rng, max_coef=100):
 
         file.write("\n\nsubject to\n")
         for i in range(nrows):
-            row_cols_str = "".join([f" +1 x{j+1}" for j in indices[indptr[i]:indptr[i+1]]])
+            row_cols_str = "".join(
+                [f" +1 x{j+1}" for j in indices[indptr[i]:indptr[i + 1]]])
             file.write(f"C{i}:" + row_cols_str + f" >= 1\n")
 
         file.write("\nbinary\n")
         file.write("".join([f" x{j+1}" for j in range(ncols)]))
 
 
-def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, max_value=100,
-                       value_deviation=0.5, add_item_prob=0.9, max_n_sub_bids=5,
-                       additivity=0.2, budget_factor=1.5, resale_factor=0.5,
-                       integers=False, warnings=False):
+def generate_cauctions(random,
+                       filename,
+                       n_items=100,
+                       n_bids=500,
+                       min_value=1,
+                       max_value=100,
+                       value_deviation=0.5,
+                       add_item_prob=0.9,
+                       max_n_sub_bids=5,
+                       additivity=0.2,
+                       budget_factor=1.5,
+                       resale_factor=0.5,
+                       integers=False,
+                       warnings=False):
     """
     Generate a Combinatorial Auction problem following the 'arbitrary' scheme found in section 4.3. of
         Kevin Leyton-Brown, Mark Pearson, and Yoav Shoham. (2000).
@@ -296,9 +330,11 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
     assert min_value >= 0 and max_value >= min_value
     assert add_item_prob >= 0 and add_item_prob <= 1
 
-    def choose_next_item(bundle_mask, interests, compats, add_item_prob, random):
+    def choose_next_item(bundle_mask, interests, compats, add_item_prob,
+                         random):
         n_items = len(interests)
-        prob = (1 - bundle_mask) * interests * compats[bundle_mask, :].mean(axis=0)
+        prob = (1 -
+                bundle_mask) * interests * compats[bundle_mask, :].mean(axis=0)
         prob /= prob.sum()
         return random.choice(n_items, p=prob)
 
@@ -318,7 +354,8 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
 
         # bidder item values (buy price) and interests
         private_interests = random.rand(n_items)
-        private_values = values + max_value * value_deviation * (2 * private_interests - 1)
+        private_values = values + max_value * value_deviation * (
+            2 * private_interests - 1)
 
         # substitutable bids of this bidder
         bidder_bids = {}
@@ -334,13 +371,15 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
             # stop when bundle full (no item left)
             if bundle_mask.sum() == n_items:
                 break
-            item = choose_next_item(bundle_mask, private_interests, compats, add_item_prob, random)
+            item = choose_next_item(bundle_mask, private_interests, compats,
+                                    add_item_prob, random)
             bundle_mask[item] = 1
 
         bundle = np.nonzero(bundle_mask)[0]
 
         # compute bundle price with value additivity
-        price = private_values[bundle].sum() + np.power(len(bundle), 1 + additivity)
+        price = private_values[bundle].sum() + np.power(
+            len(bundle), 1 + additivity)
         if integers:
             price = int(price)
 
@@ -363,13 +402,15 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
 
             # add additional items, according to bidder interests and item compatibilities
             while bundle_mask.sum() < len(bundle):
-                item = choose_next_item(bundle_mask, private_interests, compats, add_item_prob, random)
+                item = choose_next_item(bundle_mask, private_interests,
+                                        compats, add_item_prob, random)
                 bundle_mask[item] = 1
 
             sub_bundle = np.nonzero(bundle_mask)[0]
 
             # compute bundle price with value additivity
-            sub_price = private_values[sub_bundle].sum() + np.power(len(sub_bundle), 1 + additivity)
+            sub_price = private_values[sub_bundle].sum() + np.power(
+                len(sub_bundle), 1 + additivity)
             if integers:
                 sub_price = int(sub_price)
 
@@ -379,14 +420,19 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
         budget = budget_factor * price
         min_resale_value = resale_factor * values[bundle].sum()
         for bundle, price in [
-            sub_candidates[i] for i in np.argsort([-price for bundle, price in sub_candidates])]:
+                sub_candidates[i] for i in np.argsort(
+                    [-price for bundle, price in sub_candidates])
+        ]:
 
-            if len(bidder_bids) >= max_n_sub_bids + 1 or len(bids) + len(bidder_bids) >= n_bids:
+            if len(bidder_bids) >= max_n_sub_bids + 1 or len(bids) + len(
+                    bidder_bids) >= n_bids:
                 break
 
             if price < 0:
                 if warnings:
-                    print("warning: negatively priced substitutable bundle avoided")
+                    print(
+                        "warning: negatively priced substitutable bundle avoided"
+                    )
                 continue
 
             if price > budget:
@@ -396,7 +442,9 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
 
             if values[bundle].sum() < min_resale_value:
                 if warnings:
-                    print("warning: substitutable bundle below min resale value avoided")
+                    print(
+                        "warning: substitutable bundle below min resale value avoided"
+                    )
                 continue
 
             if frozenset(bundle) in bidder_bids:
@@ -440,7 +488,8 @@ def generate_cauctions(random, filename, n_items=100, n_bids=500, min_value=1, m
             file.write(f" x{i+1}")
 
 
-def generate_capacited_facility_location(random, filename, n_customers, n_facilities, ratio):
+def generate_capacited_facility_location(random, filename, n_customers,
+                                         n_facilities, ratio):
     """
     Generate a Capacited Facility Location problem following
         Cornuejols G, Sridharan R, Thizy J-M (1991)
@@ -468,8 +517,8 @@ def generate_capacited_facility_location(random, filename, n_customers, n_facili
     f_x = rng.rand(n_facilities)
     f_y = rng.rand(n_facilities)
 
-    demands = rng.randint(5, 35+1, size=n_customers)
-    capacities = rng.randint(10, 160+1, size=n_facilities)
+    demands = rng.randint(5, 35 + 1, size=n_customers)
+    capacities = rng.randint(10, 160 + 1, size=n_facilities)
     fixed_costs = rng.randint(100, 110+1, size=n_facilities) * np.sqrt(capacities) \
             + rng.randint(90+1, size=n_facilities)
     fixed_costs = fixed_costs.astype(int)
@@ -490,20 +539,34 @@ def generate_capacited_facility_location(random, filename, n_customers, n_facili
     # write problem
     with open(filename, 'w') as file:
         file.write("minimize\nobj:")
-        file.write("".join([f" +{trans_costs[i, j]} x_{i+1}_{j+1}" for i in range(n_customers) for j in range(n_facilities)]))
-        file.write("".join([f" +{fixed_costs[j]} y_{j+1}" for j in range(n_facilities)]))
+        file.write("".join([
+            f" +{trans_costs[i, j]} x_{i+1}_{j+1}" for i in range(n_customers)
+            for j in range(n_facilities)
+        ]))
+        file.write("".join(
+            [f" +{fixed_costs[j]} y_{j+1}" for j in range(n_facilities)]))
 
         file.write("\n\nsubject to\n")
         for i in range(n_customers):
-            file.write(f"demand_{i+1}:" + "".join([f" -1 x_{i+1}_{j+1}" for j in range(n_facilities)]) + f" <= -1\n")
+            file.write(
+                f"demand_{i+1}:" +
+                "".join([f" -1 x_{i+1}_{j+1}"
+                         for j in range(n_facilities)]) + f" <= -1\n")
         for j in range(n_facilities):
-            file.write(f"capacity_{j+1}:" + "".join([f" +{demands[i]} x_{i+1}_{j+1}" for i in range(n_customers)]) + f" -{capacities[j]} y_{j+1} <= 0\n")
+            file.write(f"capacity_{j+1}:" + "".join(
+                [f" +{demands[i]} x_{i+1}_{j+1}"
+                 for i in range(n_customers)]) +
+                       f" -{capacities[j]} y_{j+1} <= 0\n")
 
         # optional constraints for LP relaxation tightening
-        file.write("total_capacity:" + "".join([f" -{capacities[j]} y_{j+1}" for j in range(n_facilities)]) + f" <= -{total_demand}\n")
+        file.write("total_capacity:" + "".join(
+            [f" -{capacities[j]} y_{j+1}"
+             for j in range(n_facilities)]) + f" <= -{total_demand}\n")
         for i in range(n_customers):
             for j in range(n_facilities):
-                file.write(f"affectation_{i+1}_{j+1}: +1 x_{i+1}_{j+1} -1 y_{j+1} <= 0")
+                file.write(
+                    f"affectation_{i+1}_{j+1}: +1 x_{i+1}_{j+1} -1 y_{j+1} <= 0"
+                )
 
         file.write("\nbounds\n")
         for i in range(n_customers):
@@ -522,7 +585,8 @@ if __name__ == '__main__':
         choices=['setcover', 'cauctions', 'facilities', 'indset'],
     )
     parser.add_argument(
-        '-s', '--seed',
+        '-s',
+        '--seed',
         help='Random generator seed (default 0).',
         default=0,
     )
@@ -546,7 +610,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/train_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
@@ -556,7 +621,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/valid_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
@@ -567,7 +633,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/transfer_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
@@ -578,7 +645,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/transfer_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
@@ -589,7 +657,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/transfer_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
@@ -601,15 +670,22 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/setcover/test_{nrows}r_{ncols}c_{dens}d'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nrowss.extend([nrows] * n)
         ncolss.extend([ncols] * n)
         denss.extend([dens] * n)
 
         # actually generate the instances
-        for filename, nrows, ncols, dens in zip(filenames, nrowss, ncolss, denss):
+        for filename, nrows, ncols, dens in zip(filenames, nrowss, ncolss,
+                                                denss):
             print(f'  generating file {filename} ...')
-            generate_setcover(nrows=nrows, ncols=ncols, density=dens, filename=filename, rng=rng, max_coef=max_coef)
+            generate_setcover(nrows=nrows,
+                              ncols=ncols,
+                              density=dens,
+                              filename=filename,
+                              rng=rng,
+                              max_coef=max_coef)
 
         print('done.')
 
@@ -625,7 +701,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/train_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # validation instances
@@ -633,7 +710,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/valid_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # small transfer instances
@@ -642,7 +720,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/transfer_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # medium transfer instances
@@ -651,7 +730,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/transfer_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # big transfer instances
@@ -660,7 +740,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/transfer_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # test instances
@@ -669,7 +750,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/indset/test_{number_of_nodes}_{affinity}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nnodess.extend([number_of_nodes] * n)
 
         # actually generate the instances
@@ -692,18 +774,20 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/cauctions/train_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # validation instances
         n = 2000
         lp_dir = f'data/instances/cauctions/valid_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # small transfer instances
         n = 100
@@ -712,9 +796,10 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/cauctions/transfer_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # medium transfer instances
         n = 100
@@ -723,9 +808,10 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/cauctions/transfer_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # big transfer instances
         n = 100
@@ -734,9 +820,10 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/cauctions/transfer_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # test instances
         n = 2000
@@ -745,14 +832,19 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/cauctions/test_{number_of_items}_{number_of_bids}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         nitemss.extend([number_of_items] * n)
-        nbidss.extend([number_of_bids ] * n)
+        nbidss.extend([number_of_bids] * n)
 
         # actually generate the instances
         for filename, nitems, nbids in zip(filenames, nitemss, nbidss):
             print(f"  generating file {filename} ...")
-            generate_cauctions(rng, filename, n_items=nitems, n_bids=nbids, add_item_prob=0.7)
+            generate_cauctions(rng,
+                               filename,
+                               n_items=nitems,
+                               n_bids=nbids,
+                               add_item_prob=0.7)
 
         print("done.")
 
@@ -770,7 +862,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/train_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
@@ -780,7 +873,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/valid_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
@@ -792,7 +886,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/transfer_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
@@ -803,7 +898,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/transfer_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
@@ -814,7 +910,8 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/transfer_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
@@ -826,14 +923,20 @@ if __name__ == '__main__':
         lp_dir = f'data/instances/facilities/test_{number_of_customers}_{number_of_facilities}_{ratio}'
         print(f"{n} instances in {lp_dir}")
         os.makedirs(lp_dir)
-        filenames.extend([os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
+        filenames.extend(
+            [os.path.join(lp_dir, f'instance_{i+1}.lp') for i in range(n)])
         ncustomerss.extend([number_of_customers] * n)
         nfacilitiess.extend([number_of_facilities] * n)
         ratios.extend([ratio] * n)
 
         # actually generate the instances
-        for filename, ncs, nfs, r in zip(filenames, ncustomerss, nfacilitiess, ratios):
+        for filename, ncs, nfs, r in zip(filenames, ncustomerss, nfacilitiess,
+                                         ratios):
             print(f"  generating file {filename} ...")
-            generate_capacited_facility_location(rng, filename, n_customers=ncs, n_facilities=nfs, ratio=r)
+            generate_capacited_facility_location(rng,
+                                                 filename,
+                                                 n_customers=ncs,
+                                                 n_facilities=nfs,
+                                                 ratio=r)
 
         print("done!")

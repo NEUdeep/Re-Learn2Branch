@@ -12,25 +12,28 @@ from collections import namedtuple
 
 
 class ExploreThenStrongBranch:
+
     def __init__(self, expert_probability):
         self.expert_probability = expert_probability
         self.pseudocosts_function = ecole.observation.Pseudocosts()
-        self.strong_branching_function = ecole.observation.StrongBranchingScores()
+        self.strong_branching_function = ecole.observation.StrongBranchingScores(
+        )
 
     def before_reset(self, model):
         self.pseudocosts_function.before_reset(model)
         self.strong_branching_function.before_reset(model)
 
     def extract(self, model, done):
-        probabilities = [1-self.expert_probability, self.expert_probability]
+        probabilities = [1 - self.expert_probability, self.expert_probability]
         expert_chosen = bool(np.random.choice(np.arange(2), p=probabilities))
         if expert_chosen:
-            return (self.strong_branching_function.extract(model,done), True)
+            return (self.strong_branching_function.extract(model, done), True)
         else:
-            return (self.pseudocosts_function.extract(model,done), False)
+            return (self.pseudocosts_function.extract(model, done), False)
 
 
-def send_orders(orders_queue, instances, seed, query_expert_prob, time_limit, out_dir, stop_flag):
+def send_orders(orders_queue, instances, seed, query_expert_prob, time_limit,
+                out_dir, stop_flag):
     """
     Continuously send sampling orders to workers (relies on limited
     queue capacity).
@@ -58,7 +61,8 @@ def send_orders(orders_queue, instances, seed, query_expert_prob, time_limit, ou
     while not stop_flag.is_set():
         instance = rng.choice(instances)
         seed = rng.randint(2**32)
-        orders_queue.put([episode, instance, seed, query_expert_prob, time_limit, out_dir])
+        orders_queue.put(
+            [episode, instance, seed, query_expert_prob, time_limit, out_dir])
         episode += 1
 
 
@@ -76,17 +80,29 @@ def make_samples(in_queue, out_queue, stop_flag):
     """
     sample_counter = 0
     while not stop_flag.is_set():
-        episode, instance, seed, query_expert_prob, time_limit, out_dir = in_queue.get()
+        episode, instance, seed, query_expert_prob, time_limit, out_dir = in_queue.get(
+        )
 
-        scip_parameters = {'separating/maxrounds': 0, 'presolving/maxrestarts': 0,
-                           'limits/time': time_limit, 'timing/clocktype': 2}
-        observation_function = { "scores": ExploreThenStrongBranch(expert_probability=query_expert_prob),
-                                 "node_observation": ecole.observation.NodeBipartite() }
-        env = ecole.environment.Branching(observation_function=observation_function,
-                                          scip_params=scip_parameters, pseudo_candidates=True)
+        scip_parameters = {
+            'separating/maxrounds': 0,
+            'presolving/maxrestarts': 0,
+            'limits/time': time_limit,
+            'timing/clocktype': 2
+        }
+        observation_function = {
+            "scores":
+            ExploreThenStrongBranch(expert_probability=query_expert_prob),
+            "node_observation": ecole.observation.NodeBipartite()
+        }
+        env = ecole.environment.Branching(
+            observation_function=observation_function,
+            scip_params=scip_parameters,
+            pseudo_candidates=True)
 
-        print(f"[w {threading.current_thread().name}] episode {episode}, seed {seed}, "
-              f"processing instance '{instance}'...\n", end='')
+        print(
+            f"[w {threading.current_thread().name}] episode {episode}, seed {seed}, "
+            f"processing instance '{instance}'...\n",
+            end='')
         out_queue.put({
             'type': 'start',
             'episode': episode,
@@ -111,11 +127,12 @@ def make_samples(in_queue, out_queue, stop_flag):
                 filename = f'{out_dir}/sample_{episode}_{sample_counter}.pkl'
 
                 with gzip.open(filename, 'wb') as f:
-                    pickle.dump({
-                        'episode': episode,
-                        'instance': instance,
-                        'seed': seed,
-                        'data': data,
+                    pickle.dump(
+                        {
+                            'episode': episode,
+                            'instance': instance,
+                            'seed': seed,
+                            'data': data,
                         }, f)
                 out_queue.put({
                     'type': 'sample',
@@ -130,11 +147,15 @@ def make_samples(in_queue, out_queue, stop_flag):
                 observation, action_set, _, done, _ = env.step(action)
             except Exception as e:
                 done = True
-                with open("error_log.txt","a") as f:
-                    f.write(f"Error occurred solving {instance} with seed {seed}\n")
+                with open("error_log.txt", "a") as f:
+                    f.write(
+                        f"Error occurred solving {instance} with seed {seed}\n"
+                    )
                     f.write(f"{e}\n")
 
-        print(f"[w {threading.current_thread().name}] episode {episode} done, {sample_counter} samples\n", end='')
+        print(
+            f"[w {threading.current_thread().name}] episode {episode} done, {sample_counter} samples\n",
+            end='')
         out_queue.put({
             'type': 'done',
             'episode': episode,
@@ -170,7 +191,7 @@ def collect_samples(instances, out_dir, rng, n_samples, n_jobs,
     os.makedirs(out_dir, exist_ok=True)
 
     # start workers
-    orders_queue = queue.Queue(maxsize=2*n_jobs)
+    orders_queue = queue.Queue(maxsize=2 * n_jobs)
     answers_queue = queue.SimpleQueue()
 
     tmp_samples_dir = f'{out_dir}/tmp'
@@ -178,20 +199,21 @@ def collect_samples(instances, out_dir, rng, n_samples, n_jobs,
 
     # start dispatcher
     dispatcher_stop_flag = threading.Event()
-    dispatcher = threading.Thread(
-            target=send_orders,
-            args=(orders_queue, instances, rng.randint(2**32), query_expert_prob,
-                  time_limit, tmp_samples_dir, dispatcher_stop_flag),
-            daemon=True)
+    dispatcher = threading.Thread(target=send_orders,
+                                  args=(orders_queue, instances,
+                                        rng.randint(2**32), query_expert_prob,
+                                        time_limit, tmp_samples_dir,
+                                        dispatcher_stop_flag),
+                                  daemon=True)
     dispatcher.start()
 
     workers = []
     workers_stop_flag = threading.Event()
     for i in range(n_jobs):
-        p = threading.Thread(
-                target=make_samples,
-                args=(orders_queue, answers_queue, workers_stop_flag),
-                daemon=True)
+        p = threading.Thread(target=make_samples,
+                             args=(orders_queue, answers_queue,
+                                   workers_stop_flag),
+                             daemon=True)
         workers.append(p)
         p.start()
 
@@ -225,16 +247,21 @@ def collect_samples(instances, out_dir, rng, n_samples, n_jobs,
 
                 # else write sample
                 else:
-                    os.rename(sample['filename'], f'{out_dir}/sample_{i+1}.pkl')
+                    os.rename(sample['filename'],
+                              f'{out_dir}/sample_{i+1}.pkl')
                     in_buffer -= 1
                     i += 1
-                    print(f"[m {threading.current_thread().name}] {i} / {n_samples} samples written, "
-                          f"ep {sample['episode']} ({in_buffer} in buffer).\n", end='')
+                    print(
+                        f"[m {threading.current_thread().name}] {i} / {n_samples} samples written, "
+                        f"ep {sample['episode']} ({in_buffer} in buffer).\n",
+                        end='')
 
                     # early stop dispatcher
                     if in_buffer + i >= n_samples and dispatcher.is_alive():
                         dispatcher_stop_flag.set()
-                        print(f"[m {threading.current_thread().name}] dispatcher stopped...\n", end='')
+                        print(
+                            f"[m {threading.current_thread().name}] dispatcher stopped...\n",
+                            end='')
 
                     # as soon as enough samples are collected, stop
                     if i == n_samples:
@@ -255,13 +282,15 @@ if __name__ == '__main__':
         choices=['setcover', 'cauctions', 'facilities', 'indset', 'mknapsack'],
     )
     parser.add_argument(
-        '-s', '--seed',
+        '-s',
+        '--seed',
         help='Random generator seed.',
         type=int,
         default=0,
     )
     parser.add_argument(
-        '-j', '--njobs',
+        '-j',
+        '--njobs',
         help='Number of parallel jobs.',
         type=int,
         default=1,
@@ -277,15 +306,21 @@ if __name__ == '__main__':
     time_limit = 3600
 
     if args.problem == 'setcover':
-        instances_train = glob.glob('data/instances/setcover/train_500r_1000c_0.05d/*.lp')
-        instances_valid = glob.glob('data/instances/setcover/valid_500r_1000c_0.05d/*.lp')
-        instances_test = glob.glob('data/instances/setcover/test_500r_1000c_0.05d/*.lp')
+        instances_train = glob.glob(
+            'data/instances/setcover/train_500r_1000c_0.05d/*.lp')
+        instances_valid = glob.glob(
+            'data/instances/setcover/valid_500r_1000c_0.05d/*.lp')
+        instances_test = glob.glob(
+            'data/instances/setcover/test_500r_1000c_0.05d/*.lp')
         out_dir = 'data/samples/setcover/500r_1000c_0.05d'
 
     elif args.problem == 'cauctions':
-        instances_train = glob.glob('data/instances/cauctions/train_100_500/*.lp')
-        instances_valid = glob.glob('data/instances/cauctions/valid_100_500/*.lp')
-        instances_test = glob.glob('data/instances/cauctions/test_100_500/*.lp')
+        instances_train = glob.glob(
+            'data/instances/cauctions/train_100_500/*.lp')
+        instances_valid = glob.glob(
+            'data/instances/cauctions/valid_100_500/*.lp')
+        instances_test = glob.glob(
+            'data/instances/cauctions/test_100_500/*.lp')
         out_dir = 'data/samples/cauctions/100_500'
 
     elif args.problem == 'indset':
@@ -295,15 +330,20 @@ if __name__ == '__main__':
         out_dir = 'data/samples/indset/500_4'
 
     elif args.problem == 'facilities':
-        instances_train = glob.glob('data/instances/facilities/train_100_100_5/*.lp')
-        instances_valid = glob.glob('data/instances/facilities/valid_100_100_5/*.lp')
-        instances_test = glob.glob('data/instances/facilities/test_100_100_5/*.lp')
+        instances_train = glob.glob(
+            'data/instances/facilities/train_100_100_5/*.lp')
+        instances_valid = glob.glob(
+            'data/instances/facilities/valid_100_100_5/*.lp')
+        instances_test = glob.glob(
+            'data/instances/facilities/test_100_100_5/*.lp')
         out_dir = 'data/samples/facilities/100_100_5'
         time_limit = 600
 
     elif args.problem == 'mknapsack':
-        instances_train = glob.glob('data/instances/mknapsack/train_100_6/*.lp')
-        instances_valid = glob.glob('data/instances/mknapsack/valid_100_6/*.lp')
+        instances_train = glob.glob(
+            'data/instances/mknapsack/train_100_6/*.lp')
+        instances_valid = glob.glob(
+            'data/instances/mknapsack/valid_100_6/*.lp')
         instances_test = glob.glob('data/instances/mknapsack/test_100_6/*.lp')
         out_dir = 'data/samples/mknapsack/100_6'
         time_limit = 60
@@ -312,23 +352,37 @@ if __name__ == '__main__':
         raise NotImplementedError
 
     print(f"{len(instances_train)} train instances for {train_size} samples")
-    print(f"{len(instances_valid)} validation instances for {valid_size} samples")
+    print(
+        f"{len(instances_valid)} validation instances for {valid_size} samples"
+    )
     print(f"{len(instances_test)} test instances for {test_size} samples")
 
     # create output directory, throws an error if it already exists
     os.makedirs(out_dir, exist_ok=True)
 
     rng = np.random.RandomState(args.seed)
-    collect_samples(instances_train, out_dir + '/train', rng, train_size,
-                    args.njobs, query_expert_prob=node_record_prob,
+    collect_samples(instances_train,
+                    out_dir + '/train',
+                    rng,
+                    train_size,
+                    args.njobs,
+                    query_expert_prob=node_record_prob,
                     time_limit=time_limit)
 
     rng = np.random.RandomState(args.seed + 1)
-    collect_samples(instances_valid, out_dir + '/valid', rng, test_size,
-                    args.njobs, query_expert_prob=node_record_prob,
+    collect_samples(instances_valid,
+                    out_dir + '/valid',
+                    rng,
+                    test_size,
+                    args.njobs,
+                    query_expert_prob=node_record_prob,
                     time_limit=time_limit)
 
     rng = np.random.RandomState(args.seed + 2)
-    collect_samples(instances_test, out_dir + '/test', rng, test_size,
-                    args.njobs, query_expert_prob=node_record_prob,
+    collect_samples(instances_test,
+                    out_dir + '/test',
+                    rng,
+                    test_size,
+                    args.njobs,
+                    query_expert_prob=node_record_prob,
                     time_limit=time_limit)
