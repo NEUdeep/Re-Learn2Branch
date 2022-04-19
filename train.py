@@ -127,7 +127,7 @@ if __name__ == "__main__":
     import torch_geometric
     from utils.utilities import *
     sys.path.insert(0, os.path.abspath(f'model'))
-    from model import GNNPolicy
+    from model.model import GNNPolicy
 
     rng = np.random.RandomState(args.seed)
     torch.manual_seed(args.seed)
